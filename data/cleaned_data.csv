@@ -1,0 +1,11 @@
+id,name,email,latitude,longitude,country
+1,Alice Johnson,alice.johnson@example.com,40.7128,-74.006,USA
+2,Bob Smith,bob.smith@techcorp.io,51.5074,-0.1278,UK
+3,Carlos Diaz,carlos.diaz@mail.es,40.4168,-3.7038,Spain
+4,Diana Prince,diana@wonderwoman.org,48.8566,2.3522,France
+5,Eve Torres,eve.torres@gmail.com,-33.8688,151.2093,Australia
+6,Frank Castle,frank@punisher.net,35.6762,139.6503,Japan
+10,Iris West,iris.west@ccpd.gov,39.9042,116.4074,China
+12,Karen Page,karen.page@kingpin.com,41.9028,12.4964,Italy
+14,Matt Murdock,matt.murdock@nelsonanmurdock.law,-22.9068,-43.1729,Brazil
+15,Nancy Wheeler,nancy@hawkins.in.gov,45.4215,-75.6919,Canada

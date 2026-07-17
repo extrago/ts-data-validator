@@ -1,0 +1,91 @@
+{
+  // ===========================================================================
+  // tsconfig.json — TypeScript Compiler Configuration
+  // ===========================================================================
+  // WHY THIS FILE EXISTS:
+  //   TypeScript needs to know how strict to be, which JS version to compile to,
+  //   and where to find/output files. This file centralizes all those settings
+  //   so every developer on the team uses the same rules.
+  //
+  // STRICT MODE PHILOSOPHY:
+  //   "strict: true" is the single most important option for production code.
+  //   It enables a family of checks (strictNullChecks, noImplicitAny, etc.)
+  //   that force you to be explicit about types — preventing a huge class of
+  //   runtime bugs at compile time instead.
+  // ===========================================================================
+
+  "compilerOptions": {
+    // -------------------------------------------------------------------------
+    // OUTPUT TARGET
+    // -------------------------------------------------------------------------
+    // "target": The JavaScript version to compile down to.
+    //   "ES2020" gives us async/await, optional chaining (?.) and nullish
+    //   coalescing (??) without needing extra polyfills in modern Node.js.
+    "target": "ES2020",
+
+    // "module": The module system to use in the compiled JS output.
+    //   "CommonJS" is the standard for Node.js (require/module.exports).
+    "module": "CommonJS",
+
+    // "outDir": Where compiled JavaScript files are placed.
+    //   Keeping them in "dist/" separates source from build artifacts.
+    "outDir": "./dist",
+
+    // "rootDir": The root of your source TypeScript files.
+    //   Tells the compiler to mirror the src/ structure inside dist/.
+    "rootDir": "./src",
+
+    // -------------------------------------------------------------------------
+    // STRICT TYPE CHECKING (The Core of "Production-Ready" TypeScript)
+    // -------------------------------------------------------------------------
+    // "strict": Enables ALL strict type-checking options at once. This is the
+    //   recommended setting for new projects. It includes:
+    //   - strictNullChecks:   Variables can't be null/undefined unless you say so.
+    //   - noImplicitAny:      You must declare types; the compiler won't guess.
+    //   - strictFunctionTypes: Prevents unsafe function argument substitution.
+    //   - strictPropertyInitialization: Class properties must be assigned in constructor.
+    "strict": true,
+
+    // "noUnusedLocals": Compiler error if you declare a local variable but
+    //   never use it. Keeps code clean and prevents logical mistakes.
+    "noUnusedLocals": true,
+
+    // "noUnusedParameters": Same as above, but for function parameters.
+    "noUnusedParameters": true,
+
+    // "noImplicitReturns": Every code path in a function must return a value.
+    //   Prevents bugs where a function sometimes returns undefined by accident.
+    "noImplicitReturns": true,
+
+    // -------------------------------------------------------------------------
+    // MODULE RESOLUTION
+    // -------------------------------------------------------------------------
+    // "esModuleInterop": Allows default imports from CommonJS modules (like
+    //   'csv-parser') that don't have a proper default export. Without this,
+    //   you'd have to write `import * as csvParser from 'csv-parser'`.
+    "esModuleInterop": true,
+
+    // "resolveJsonModule": Allows you to import .json files directly as modules.
+    "resolveJsonModule": true,
+
+    // "skipLibCheck": Skip type-checking of declaration files in node_modules.
+    //   WHY: Third-party type definitions can have errors outside your control.
+    //   This speeds up compilation and avoids noise from library issues.
+    "skipLibCheck": true,
+
+    // -------------------------------------------------------------------------
+    // SOURCE MAPS
+    // -------------------------------------------------------------------------
+    // "sourceMap": Generates .map files alongside compiled JS.
+    //   WHY: When an error occurs in the compiled JS, the source map lets
+    //   debuggers (and stack traces) point back to the original TypeScript line.
+    "sourceMap": true
+  },
+
+  // "include": Which files/folders the compiler should process.
+  "include": ["src/**/*"],
+
+  // "exclude": Which files/folders to ignore.
+  //   node_modules must always be excluded to avoid re-compiling dependencies.
+  "exclude": ["node_modules", "dist"]
+}

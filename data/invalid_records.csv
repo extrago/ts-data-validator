@@ -1,0 +1,7 @@
+id,name,email,latitude,longitude,country,validationError
+7,INVALID_ROW,not-an-email,99.9999,-74.0060,USA,"Email ""not-an-email"" must contain exactly one ""@"" symbol."
+8,Grace Hopper,grace@navy.mil,-91.0000,0.0000,USA,"Latitude ""-91"" is out of bounds. Must be between -90 and 90."
+9,Hank Pym,,37.7749,-122.4194,USA,Email field is empty.
+1,Duplicate ID,duplicate@test.com,0.0000,0.0000,Ocean,"ID ""1"" is a duplicate. IDs must be unique."
+11,Jack Sparrow,jack@blackpearl,14.0583,108.2772,Vietnam,"Email ""jack@blackpearl"" has an invalid domain (missing ""."")."
+13,Luke Cage,luke@harlem.nyc.us,0.0000,200.0000,USA,"Longitude ""200"" is out of bounds. Must be between -180 and 180."
