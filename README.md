@@ -1,156 +1,205 @@
-# 🧹 Data Validator & Cleaner CLI
+<div align="center">
 
-A lightweight, production-ready CLI tool built with **Node.js** and **TypeScript** that reads a CSV file, validates each row against a set of rules, separates valid from invalid records, cleans the valid data, and writes two output CSV files.
+# TypeScript Data Validator & Cleaner
+
+**A production-ready CLI tool that streams, validates, and cleans raw CSV data — handling corrupt records gracefully, at any scale.**
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![CLI](https://img.shields.io/badge/Interface-CLI-black?style=for-the-badge&logo=gnometerminal&logoColor=white)](https://en.wikipedia.org/wiki/Command-line_interface)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+[![Strict Mode](https://img.shields.io/badge/TypeScript-strict%20mode-blue?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/tsconfig#strict)
+
+</div>
 
 ---
 
-## 📁 Project Structure
+## Overview
+
+`data-validator-cli` is a modular, streaming CLI pipeline that ingests raw CSV files, applies a configurable set of validation rules, sanitizes and type-narrows clean records, and routes invalid rows to a dedicated report file — all without ever crashing the pipeline.
+
+Built as a demonstration of **production TypeScript engineering**, the project prioritizes strict type safety, memory-efficient I/O, and a clean separation of concerns across its modules.
+
+---
+
+## Key Technical Highlights
+
+### Zero `any` · Full Strict TypeScript
+The project runs under `"strict": true` in `tsconfig.json`, which activates the complete suite of strict checks — `strictNullChecks`, `noImplicitAny`, `noImplicitReturns`, `noUnusedLocals`, and more. No escape hatches. Every variable, parameter, and return value is explicitly and accurately typed.
+
+### Type Narrowing — From Raw Data to Typed Domain Objects
+All CSV rows enter the pipeline as `RawCsvRow` — a flat interface where **every field is a `string`**, because CSV files are plain text. Only after passing validation does a row get transformed by `cleaner.ts` into a `ValidatedRecord`, where `id`, `latitude`, and `longitude` are proper `number` primitives. This two-stage type progression is enforced by the compiler, making it impossible to accidentally use raw string data as if it were a parsed number.
+
+```
+RawCsvRow  { id: string, latitude: string, ... }
+    │
+    ▼  validator.ts + cleaner.ts
+    │
+ValidatedRecord  { id: number, latitude: number, ... }
+```
+
+### O(1) Duplicate Detection with `Set<number>`
+Unique ID enforcement uses a module-scoped `Set<number>` rather than an array. Membership checks on a `Set` are **O(1) constant time**, compared to O(n) for `Array.prototype.includes()`. At scale — millions of rows — this is the difference between a tool that finishes in seconds and one that crawls.
+
+### Memory-Efficient Streaming I/O
+The input file is never loaded into memory. `fs.createReadStream()` opens the file as a **Readable Stream**, piped through `csv-parser` which emits one row object per `'data'` event. The entire stream is wrapped in a `Promise` to interoperate cleanly with `async/await`. Output files are written the same way using `fast-csv`'s Writable Stream, ensuring a flat, predictable memory footprint regardless of file size.
+
+### Graceful Error Handling — No Row Crashes the Pipeline
+Invalid rows are intercepted at the validation stage. They are collected into an `InvalidRecord[]` array — which extends `RawCsvRow` with a `validationError: string` field — and written to `invalid_records.csv` at the end of the run. The pipeline **never throws on bad data**. A top-level `.catch()` on the `main()` Promise guards against genuine I/O failures, exiting with code `1` so that CI/CD systems can detect a failed run.
+
+### Generic, Reusable `writeCsv<T>()` Utility
+A single generic function `writeCsv<T extends object>(records: T[], filePath: string)` handles writing both output files. TypeScript's generics eliminate code duplication without any casting or loss of type information — the compiler verifies the shape of every record at the call site.
+
+---
+
+## Project Architecture
 
 ```
 data-validator-cli/
+│
 ├── data/
-│   ├── sample_input.csv      ← Your input data goes here
-│   ├── cleaned_data.csv      ← Auto-generated: valid, clean records
-│   └── invalid_records.csv   ← Auto-generated: bad records + reason
+│   ├── sample_input.csv        # Input — 15 rows with deliberate errors for testing
+│   ├── cleaned_data.csv        # Output — valid, sanitized, typed records
+│   └── invalid_records.csv     # Output — rejected rows + validationError column
+│
 ├── src/
-│   ├── index.ts              ← Main entry point & pipeline orchestrator
-│   ├── types.ts              ← All TypeScript interfaces and type aliases
-│   ├── validator.ts          ← Validation rule functions
-│   └── cleaner.ts            ← Data sanitization and type conversion
+│   ├── index.ts                # Pipeline orchestrator: stream → validate → clean → write
+│   ├── types.ts                # All interfaces & type aliases (single source of truth)
+│   ├── validator.ts            # Pure validation logic: ID, email, coordinates
+│   └── cleaner.ts              # Sanitization: trim, normalize, parse, defaults
+│
 ├── package.json
-├── tsconfig.json
+├── tsconfig.json               # strict: true + all compiler options documented
 └── README.md
 ```
 
+**Module responsibilities are strictly separated:**
+
+| Module | Answers the question |
+|---|---|
+| `types.ts` | What does the data look like? |
+| `validator.ts` | Is the data correct? |
+| `cleaner.ts` | How do we shape valid data into its final type? |
+| `index.ts` | In what order does everything run? |
+
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) v18 or higher
-- npm (comes with Node.js)
+- **Node.js** v18 or higher
+- **npm** v8 or higher
 
-### 1. Install Dependencies
+### Installation
 
 ```bash
+git clone https://github.com/your-username/data-validator-cli.git
+cd data-validator-cli
 npm install
 ```
 
-This installs:
-- **`csv-parser`** — A fast, streaming CSV reader for Node.js.
-- **`fast-csv`** — A CSV formatting and writing library.
-- **`ts-node`** — Runs TypeScript files directly without a build step (for dev).
-- **`typescript`** — The TypeScript compiler.
+### Run the Tool
 
----
-
-## ▶️ Running the Tool
-
-### Development Mode (Recommended for Learning)
-
-Runs the TypeScript source directly using `ts-node`. No build step needed.
+Execute the full validation pipeline against `data/sample_input.csv`:
 
 ```bash
 npm run dev
 ```
 
-### Production Mode (Compiled JavaScript)
+> This uses `ts-node` to run TypeScript directly — no build step required for development.
 
-First compile TypeScript to JavaScript, then run the output.
+To compile first and run the JavaScript output:
 
 ```bash
 npm run build
 npm run start
 ```
 
----
+### CI Type Check (No Emit)
 
-## ⚙️ Execution Flow
+Validate the entire codebase for type errors without producing any output files — ideal for CI/CD pipelines:
 
-The program runs in 4 clear stages:
-
-```
-[READ]     → fs.createReadStream() + csv-parser reads sample_input.csv row by row (streaming)
-    ↓
-[VALIDATE] → validator.ts checks each row against ID, email, and coordinate rules
-    ↓
-[CLEAN]    → cleaner.ts trims, normalizes, and type-converts valid rows
-    ↓
-[WRITE]    → fast-csv writes cleaned_data.csv and invalid_records.csv
+```bash
+npx tsc --noEmit
 ```
 
----
-
-## ✅ Validation Rules
-
-| Field       | Rule                                                              |
-|-------------|-------------------------------------------------------------------|
-| `id`        | Must be a **unique, positive integer**                           |
-| `email`     | Must contain exactly one `@` and a domain with a `.`             |
-| `latitude`  | Must be a number between **-90** and **90** (inclusive)          |
-| `longitude` | Must be a number between **-180** and **180** (inclusive)        |
-
-Invalid rows are **never crashed on** — they are gracefully captured and logged.
+A clean exit (code `0`) confirms zero type errors across the project.
 
 ---
 
-## 📊 Sample Input Data
+## Data Flow
 
-The file `data/sample_input.csv` is included and contains 15 test rows with deliberate errors:
-
-| ID | Name            | Email                          | Lat       | Lon        | Country   | Expected Result             |
-|----|-----------------|--------------------------------|-----------|------------|-----------|-----------------------------|
-| 1  | Alice Johnson   | alice.johnson@example.com      | 40.7128   | -74.0060   | USA       | ✅ Valid                    |
-| 2  | Bob Smith       | bob.smith@techcorp.io          | 51.5074   | -0.1278    | UK        | ✅ Valid                    |
-| 3  | Carlos Diaz     | carlos.diaz@mail.es            | 40.4168   | -3.7038    | Spain     | ✅ Valid                    |
-| 4  | Diana Prince    | diana@wonderwoman.org          | 48.8566   | 2.3522     | France    | ✅ Valid (whitespace trimmed)|
-| 5  | Eve Torres      | eve.torres@gmail.com           | -33.8688  | 151.2093   | Australia | ✅ Valid                    |
-| 6  | Frank Castle    | FRANK@PUNISHER.NET             | 35.6762   | 139.6503   | Japan     | ✅ Valid (email normalized)  |
-| 7  | INVALID_ROW     | not-an-email                   | 99.9999   | -74.0060   | USA       | ❌ Invalid email             |
-| 8  | Grace Hopper    | grace@navy.mil                 | -91.0000  | 0.0000     | USA       | ❌ Latitude out of range     |
-| 9  | Hank Pym        | *(empty)*                      | 37.7749   | -122.4194  | USA       | ❌ Email is empty            |
-| 10 | Iris West       | iris.west@ccpd.gov             | 39.9042   | 116.4074   | China     | ✅ Valid                    |
-| 1  | Duplicate ID    | duplicate@test.com             | 0.0000    | 0.0000     | Ocean     | ❌ Duplicate ID              |
-| 11 | Jack Sparrow    | jack@blackpearl                | 14.0583   | 108.2772   | Vietnam   | ❌ Email domain missing `.`  |
-| 12 | Karen Page      | karen.page@kingpin.com         | 41.9028   | 12.4964    | Italy     | ✅ Valid                    |
-| 13 | Luke Cage       | luke@harlem.nyc.us             | 0.0000    | 200.0000   | USA       | ❌ Longitude out of range    |
-| 14 | Matt Murdock    | matt.murdock@nelsonanmurdock.law| -22.9068 | -43.1729   | Brazil    | ✅ Valid                    |
-| 15 | Nancy Wheeler   | nancy@hawkins.in.gov           | 45.4215   | -75.6919   | Canada    | ✅ Valid                    |
-
----
-
-## 📤 Output Files
-
-After running the tool, two files are written to the `data/` directory:
-
-### `data/cleaned_data.csv`
-Contains only the valid, sanitized records with proper types and normalized values (e.g., emails in lowercase, whitespace removed).
-
-### `data/invalid_records.csv`
-Contains the raw values of failed rows, plus a new `validationError` column that explains exactly why the row was rejected.
+```
+┌─────────────────────────┐
+│     sample_input.csv    │  ← Raw CSV file (strings only)
+└────────────┬────────────┘
+             │  fs.createReadStream() + csv-parser
+             ▼
+┌─────────────────────────┐
+│      Stream Reader      │  ← Emits one RawCsvRow per 'data' event
+└────────────┬────────────┘
+             │  Row-by-row, in memory
+             ▼
+┌─────────────────────────┐
+│   Validator & Cleaner   │  ← Checks rules; type-narrows valid rows
+└────────┬────────┬───────┘
+         │        │
+         ▼        ▼
+┌──────────────┐  ┌────────────────────────┐
+│cleaned_data  │  │  invalid_records.csv   │
+│   .csv       │  │  (+ validationError    │
+│              │  │   column per row)      │
+└──────────────┘  └────────────────────────┘
+```
 
 ---
 
-## 🧠 Key TypeScript & Node.js Concepts Used
+## Validation Rules
 
-| Concept | Where | Why |
-|---|---|---|
-| **Interfaces** | `src/types.ts` | Define the shape of data objects as contracts between modules |
-| **Type Aliases** | `src/types.ts` | `ValidationError = string \| null` models exactly two outcomes |
-| **Type Narrowing** | `src/cleaner.ts` | Convert `RawCsvRow` (all strings) to `ValidatedRecord` (typed) |
-| **Generic Functions** | `src/index.ts` | `writeCsv<T>()` works for any object type without code duplication |
-| **Async/Await** | `src/index.ts` | Write readable async code that waits for I/O without blocking |
-| **Readable Streams** | `src/index.ts` | Process huge CSV files row-by-row without loading into memory |
-| **Module Scoped State** | `src/validator.ts` | `seenIds` Set persists across calls to detect duplicate IDs |
-| **Spread Operator** | `src/index.ts` | `{ ...row, validationError }` extends objects immutably |
-
----
-
-## 🔧 Available Scripts
-
-| Command | Description |
+| Field | Rule |
 |---|---|
-| `npm run dev` | Run directly with `ts-node` (no build step) |
-| `npm run build` | Compile TypeScript → JavaScript in `dist/` |
-| `npm run start` | Run the compiled JavaScript output |
+| `id` | Positive integer; must be unique across the entire file |
+| `email` | Must contain exactly one `@`; domain must contain at least one `.` |
+| `latitude` | Numeric value in range `[-90, 90]` |
+| `longitude` | Numeric value in range `[-180, 180]` |
+
+Rows failing any rule are written to `invalid_records.csv` with a precise, human-readable `validationError` message. The remaining rows are written to `cleaned_data.csv` with all strings trimmed, emails lowercased, and numeric fields properly parsed.
+
+---
+
+## Sample Run Output
+
+```
+============================================================
+  Data Validator & Cleaner CLI
+============================================================
+[INFO] Input file  : .../data/sample_input.csv
+[INFO] Clean output: .../data/cleaned_data.csv
+[INFO] Invalid output: .../data/invalid_records.csv
+------------------------------------------------------------
+
+[INFO] Processing row 7: ID=7
+  [WARN] Row 7: Email validation failed — Email "not-an-email" must contain exactly one "@" symbol.
+
+[INFO] Processing row 8: ID=8
+  [WARN] Row 8: Coordinate validation failed — Latitude "-91" is out of bounds. Must be between -90 and 90.
+
+...
+
+============================================================
+  Processing Summary
+============================================================
+  Total rows processed : 16
+  Valid records        : 10
+  Invalid records      : 6
+============================================================
+
+[DONE] Processing complete.
+```
+
+---
+
+## License
+
+Distributed under the [MIT License](LICENSE).
